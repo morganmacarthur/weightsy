@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>weightsy - Privacy-first daily metrics</title>
+  <meta name="description" content="Track weight, blood pressure, and body fat with minimal stored identity data.">
+  <style>
+    :root {
+      --bg: #0b0b0d;
+      --panel: #131318;
+      --muted: #a0a3ad;
+      --text: #f3f5fa;
+      --line: #2a2d36;
+      --accent: #6ee7b7;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: radial-gradient(1200px 500px at 20% -10%, #1a1d25 0%, var(--bg) 50%);
+      color: var(--text);
+      line-height: 1.4;
+    }
+    .wrap { max-width: 1000px; margin: 0 auto; padding: 24px; }
+    .nav { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+    .nav a { color: var(--muted); text-decoration: none; margin-left: 14px; }
+    .hero { display: grid; grid-template-columns: 1.2fr .8fr; gap: 22px; margin-top: 22px; }
+    .panel {
+      background: color-mix(in oklab, var(--panel) 92%, black);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 20px;
+    }
+    h1 { margin: 6px 0 10px; font-size: 40px; line-height: 1.05; }
+    p { margin: 0 0 12px; color: var(--muted); }
+    .pill {
+      display: inline-block;
+      border: 1px solid #345247;
+      color: #9feecf;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+    .cta { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+    .btn {
+      display: inline-block;
+      text-decoration: none;
+      color: #04100c;
+      background: var(--accent);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-weight: 700;
+      border: 0;
+      cursor: pointer;
+    }
+    .btn.alt {
+      color: var(--text);
+      background: transparent;
+      border: 1px solid var(--line);
+    }
+    label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 6px; }
+    input, select {
+      width: 100%;
+      background: #0d0f13;
+      color: var(--text);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 11px;
+      outline: none;
+    }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .strip {
+      margin-top: 16px;
+      border-top: 1px solid var(--line);
+      padding-top: 12px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .small { font-size: 13px; color: var(--muted); }
+    @media (max-width: 900px) {
+      .hero { grid-template-columns: 1fr; }
+      .cards { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="nav">
+      <div aria-label="weightsy logo">
+        <svg xmlns="http://www.w3.org/2000/svg" height="27" width="120" viewBox="0 0 337.3 76"><path d="M339 18.5h-7L318 55.3l-16-36.8h-7.3l20 44a16.9 16.9 0 0 1-4 6.4 7.2 7.2 0 0 1-5 1.8 15 15 0 0 1-5.7-1.1l-1.1 5.7a20.2 20.2 0 0 0 7.3 1.4 13.2 13.2 0 0 0 8.7-3 22.6 22.6 0 0 0 6-9.3L339 18.5zM281.6 13.5h6.7V5.3h-6.7v8.2zM281.6 64h6.7V18.5h-6.7V64zM271 58.6a9.8 9.8 0 0 1-5.7 1.8 6.4 6.4 0 0 1-5-2 8.4 8.4 0 0 1-1.8-5.7V24h11.6v-5.5h-11.6V7.5h-6.7v11H244V24h7.8v29.5c0 3.4 1 6.2 3 8.3a11.3 11.3 0 0 0 8.2 3.1 14.8 14.8 0 0 0 9.2-3L271 58.6zM233.6 18.5h-6.7V64h6.7V18.5zM219 26a13.8 13.8 0 0 0-5.1-5.8 14.8 14.8 0 0 0-8.2-2.2c-4.1 0-7.6 1-10.5 3a20 20 0 0 0-6.8 8 26.4 26.4 0 0 0-2.3 11 25.2 25.2 0 0 0 2.5 11.4 18.8 18.8 0 0 0 7 7.6 21.2 21.2 0 0 0 20.4.8 17 17 0 0 0 6.7-6.4l-4.8-3a12.5 12.5 0 0 1-4.8 4.8 14.3 14.3 0 0 1-7 1.8 13 13 0 0 1-7.2-2 13.2 13.2 0 0 1-4.8-5.1 17.1 17.1 0 0 1-1.8-7h31l.1-2c0-4.3-.6-8.1-1.8-11.5zm-26.4 11.7a13 13 0 0 1 1.9-5.8 12.5 12.5 0 0 1 4.4-4.2 13 13 0 0 1 6.5-1.6 11.9 11.9 0 0 1 6.4 1.6 10.7 10.7 0 0 1 3.9 4.2 14.2 14.2 0 0 1 1.5 5.8h-24.6zM176 18.5h-6.6v7.4a14.2 14.2 0 0 0-5.7-6 17.8 17.8 0 0 0-8.8-2 17.7 17.7 0 0 0-9.8 2.7 18.1 18.1 0 0 0-6.6 7.4 24.2 24.2 0 0 0-2.4 10.8 24 24 0 0 0 2.4 10.8 18.1 18.1 0 0 0 6.6 7.4 17.7 17.7 0 0 0 9.8 2.7 17.8 17.8 0 0 0 8.8-2 14.2 14.2 0 0 0 5.7-6v7.5h6.6V18.5zm-9.3 28.3a12.6 12.6 0 0 1-4.7 5 14 14 0 0 1-7 1.8 13.7 13.7 0 0 1-7-1.8 12.3 12.3 0 0 1-4.6-5 17 17 0 0 1-1.6-7.6 17 17 0 0 1 1.6-7.6 12.3 12.3 0 0 1 4.6-5 13.7 13.7 0 0 1 7-1.8 14 14 0 0 1 7 1.8 12.6 12.6 0 0 1 4.7 5 16.4 16.4 0 0 1 1.7 7.6 16.4 16.4 0 0 1-1.7 7.6zM117.8 18.5h-6.6v6.6a12 12 0 0 0-4.8-5.3 15 15 0 0 0-7.7-1.9 14.2 14.2 0 0 0-7.7 2.1 13.4 13.4 0 0 0-5 6 18.6 18.6 0 0 0-4.8-6 13.3 13.3 0 0 0-8-2.1 15 15 0 0 0-7.9 2 13.2 13.2 0 0 0-5.1 5.6v-7h-6.6V64h6.6V38.4c0-4 1-7.1 3-9.2a10.5 10.5 0 0 1 8-3.2 9.6 9.6 0 0 1 7.5 3c1.8 2 2.6 5 2.6 8.9V64h6.7V38.4c0-4 1-7.1 2.9-9.2a10.4 10.4 0 0 1 8-3.2 9.6 9.6 0 0 1 7.5 3c1.7 2 2.6 5 2.6 8.9V64h6.6V36.9c0-6-1.4-10.6-4.1-13.8a14 14 0 0 0-11.3-4.8zM33.3 18.5h-6.9l-12 36.5L2.4 18.5h-7l15.8 45.6h6.5l12.1-36.2L42 64h6.6l15.8-45.6h-7L45.6 55 33.3 18.5z"/></svg>
+      </div>
+      <nav>
+        <a href="/app/">App</a>
+        <a href="/blog/">Blog</a>
+      </nav>
+    </header>
+
+    <section class="hero">
+      <div class="panel">
+        <span class="pill">Privacy-first by design</span>
+        <h1>Track weight, blood pressure, and body fat. Keep identity light.</h1>
+        <p>weightsy is being built around minimum-data defaults: simple daily logging, clear trend views, and transparent storage practices.</p>
+        <div class="cta">
+          <a class="btn" href="/app/">Open App</a>
+          <a class="btn alt" href="/blog/">Read Updates</a>
+        </div>
+        <div class="strip">
+          Core promise: no profile bloat, no names required, and a public data schema.
+        </div>
+      </div>
+
+      <aside class="panel">
+        <h2 style="margin:0 0 6px;">Join early testing</h2>
+        <p class="small">Email-first signup (phone optional). Diet style is optional and used only for aggregate leaderboard grouping.</p>
+        <form method="post" action="/signup.php">
+          <label for="email">Email (preferred)</label>
+          <input id="email" name="email" type="email" placeholder="you@example.com" required>
+          <label for="phone">Phone (optional)</label>
+          <input id="phone" name="phone" type="tel" placeholder="+1 555 555 5555">
+          <div class="grid2">
+            <div>
+              <label for="diet">Diet style</label>
+              <select id="diet" name="diet">
+                <option value="">Prefer not to say</option>
+                <option>Carnivore</option>
+                <option>Ketogenic</option>
+                <option>Mediterranean</option>
+                <option>Balanced</option>
+                <option>Vegetarian</option>
+                <option>Vegan</option>
+              </select>
+            </div>
+            <div>
+              <label for="tz">Timezone</label>
+              <input id="tz" name="timezone" placeholder="America/New_York">
+            </div>
+          </div>
+          <div class="cta" style="margin-top:12px;">
+            <button class="btn" type="submit">Request Access</button>
+          </div>
+        </form>
+      </aside>
+    </section>
+
+    <section class="cards">
+      <article class="panel">
+        <h3 style="margin:0 0 8px;">Single-screen logging</h3>
+        <p class="small">`180`, `120/80`, and `18%` entry grammar for fast daily updates.</p>
+      </article>
+      <article class="panel">
+        <h3 style="margin:0 0 8px;">Unified progress graph</h3>
+        <p class="small">Weight, blood pressure, and body fat in one compact view.</p>
+      </article>
+      <article class="panel">
+        <h3 style="margin:0 0 8px;">Diet-style leaderboard</h3>
+        <p class="small">Aggregate trends by diet style without identity-heavy profiles.</p>
+      </article>
+    </section>
+  </div>
+</body>
+</html>

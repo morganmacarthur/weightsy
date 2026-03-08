@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Data schema v0 draft</title>
+</head>
+<body style="margin:0;background:#0b0b0d;color:#eef1f7;font-family:ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
+  <main style="max-width:850px;margin:0 auto;padding:24px;">
+    <a href="/blog/" style="color:#9feecf;text-decoration:none;">&larr; Back to blog</a>
+    <h1>Data schema v0 draft</h1>
+    <p style="color:#a0a3ad;">Draft schema for identity-minimal tracking.</p>
+    <pre style="background:#131318;border:1px solid #2a2d36;padding:12px;border-radius:10px;color:#d7dae2;">
+users(id, phone_hash, timezone, diet_style, created_at)
+entries(id, user_id, entry_date, weight, bp_sys, bp_dia, body_fat_pct, created_at)
+leaderboard_daily(date, diet_style, n_users, avg_weight_delta_7d, avg_bp_sys_7d, avg_body_fat_delta_7d)
+    </pre>
+  </main>
+</body>
+</html>
