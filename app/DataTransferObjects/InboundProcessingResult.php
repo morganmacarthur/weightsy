@@ -15,6 +15,6 @@ class InboundProcessingResult
         public readonly ?Checkin $checkin,
         public readonly Message $message,
         public readonly ?ParsedCheckin $parsedCheckin,
-    ) {
-    }
+        public readonly bool $duplicate = false,
+    ) {}
 }

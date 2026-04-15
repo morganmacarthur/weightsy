@@ -168,12 +168,11 @@ class TimelineController extends Controller
                 $cx = $scaleX($dateStr);
                 $cy = $scaleY($v);
                 $pts[] = $cx.','.$cy;
-                $unit = $metric === 'body_fat' ? '%' : '';
                 $dots[] = [
                     'id' => $checkin->id,
                     'cx' => $cx,
                     'cy' => $cy,
-                    'title' => $dateStr.' · '.$checkin->displayValue().$unit,
+                    'title' => $dateStr.' · '.$checkin->displayValue(),
                 ];
             }
             $color = $metric === 'body_fat' ? '#cf6679' : '#10212f';

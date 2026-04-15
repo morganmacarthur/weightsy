@@ -40,7 +40,7 @@ class PollImapInboxTest extends TestCase
                 rawBody: '120/70',
             ),
         ]);
-        $responder = new FakeInboundCheckinResponder();
+        $responder = new FakeInboundCheckinResponder;
 
         $this->app->instance(InboundMailbox::class, $mailbox);
         $this->app->instance(InboundCheckinResponder::class, $responder);
@@ -59,7 +59,7 @@ class PollImapInboxTest extends TestCase
         $this->assertCount(2, $responder->sent);
     }
 
-    public function test_it_records_an_outbound_reply_for_a_processed_checkin(): void
+    public function test_it_does_not_send_recorded_reply_for_existing_user_checkin(): void
     {
         Mail::fake();
 
@@ -94,17 +94,7 @@ class PollImapInboxTest extends TestCase
             ->expectsOutputToContain('Processed UID 101')
             ->assertSuccessful();
 
-        $this->assertDatabaseHas('messages', [
-            'user_id' => $user->id,
-            'direction' => 'outbound',
-            'provider' => 'smtp',
-            'subject' => 'Recorded: 123',
-        ]);
-
-        $outbound = Message::query()->where('direction', 'outbound')->latest('id')->first();
-
-        $this->assertNotNull($outbound);
-        $this->assertSame('checkin_response', data_get($outbound->metadata, 'category'));
+        $this->assertSame(0, Message::query()->where('direction', 'outbound')->count());
     }
 
     public function test_it_parses_a_reply_above_quoted_original_content(): void
@@ -148,10 +138,6 @@ class PollImapInboxTest extends TestCase
             'raw_input' => "345\n\nOn Mon, Apr 13, 2026 at 5:32 AM Weightsy <update@weightsy.com> wrote:\n> Time for today's Weightsy check-in.\n> \n> Reply with one of these:\n> 123",
         ]);
 
-        $this->assertDatabaseHas('messages', [
-            'user_id' => $user->id,
-            'direction' => 'outbound',
-            'subject' => 'Recorded: 345',
-        ]);
+        $this->assertSame(0, Message::query()->where('direction', 'outbound')->count());
     }
 }

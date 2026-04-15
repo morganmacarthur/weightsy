@@ -16,6 +16,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo as BelongsToRelation;
     'remind_at_local',
     'last_sent_for_date',
     'next_run_at',
+    'last_reminder_failure_at',
+    'last_reminder_failure_reason',
+    'reminder_failure_count',
 ])]
 class ReminderSchedule extends Model
 {
@@ -24,6 +27,7 @@ class ReminderSchedule extends Model
         return [
             'last_sent_for_date' => 'date',
             'next_run_at' => 'datetime',
+            'last_reminder_failure_at' => 'datetime',
         ];
     }
 

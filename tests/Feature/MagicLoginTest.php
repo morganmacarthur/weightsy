@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\DataTransferObjects\InboundMessageData;
 use App\Models\Checkin;
 use App\Models\ContactPoint;
-use App\Models\Message;
 use App\Models\User;
 use App\Services\InboundCheckinProcessor;
 use App\Services\InboundCheckinResponder;
@@ -54,50 +53,45 @@ class MagicLoginTest extends TestCase
             ->assertSee('344');
     }
 
-    public function test_recorded_email_contains_a_magic_link(): void
+    public function test_existing_user_checkin_does_not_send_recorded_reply_email(): void
     {
         Mail::fake();
+
+        $user = User::factory()->create([
+            'email' => 'checker@example.com',
+            'notification_confirmed_at' => now(),
+        ]);
+
+        $contact = ContactPoint::query()->create([
+            'user_id' => $user->id,
+            'channel' => 'email',
+            'address' => 'checker@example.com',
+            'normalized_address' => 'checker@example.com',
+            'receives_reminders' => true,
+        ]);
 
         $processor = app(InboundCheckinProcessor::class);
         $responder = app(InboundCheckinResponder::class);
 
-        $firstInbound = new InboundMessageData(
-            externalId: 'first-1',
+        $inbound = new InboundMessageData(
+            externalId: 'ext-existing-1',
             from: 'checker@example.com',
             channel: 'email',
-            subject: 'first',
-            text: '123',
-            receivedAt: now()->subDay()->toImmutable(),
-            provider: 'test',
-            metadata: [],
-        );
-
-        $firstResult = $processor->process($firstInbound);
-        $responder->send($firstInbound, $firstResult);
-
-        $secondInbound = new InboundMessageData(
-            externalId: 'second-1',
-            from: 'checker@example.com',
-            channel: 'email',
-            subject: 'second',
+            subject: 'check-in',
             text: '124',
             receivedAt: now()->toImmutable(),
             provider: 'test',
             metadata: [],
         );
 
-        $secondResult = $processor->process($secondInbound);
-        $responder->send($secondInbound, $secondResult);
+        $result = $processor->process($inbound);
+        $responder->send($inbound, $result);
 
-        $outbound = Message::query()
-            ->where('direction', 'outbound')
-            ->where('subject', 'Recorded: 124')
-            ->latest('id')
-            ->first();
-
-        $this->assertNotNull($outbound);
-        $this->assertStringContainsString('/app/login/', $outbound->body_text);
-        $this->assertStringContainsString('Open your timeline:', $outbound->body_text);
-        $this->assertTrue(\App\Models\LoginToken::query()->where('user_id', $secondResult->user?->id)->exists());
+        Mail::assertNothingSent();
+        $this->assertDatabaseHas('checkins', [
+            'user_id' => $user->id,
+            'contact_point_id' => $contact->id,
+            'raw_input' => '124',
+        ]);
     }
 }

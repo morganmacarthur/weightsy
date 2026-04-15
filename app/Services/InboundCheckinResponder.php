@@ -11,12 +11,14 @@ class InboundCheckinResponder
 {
     public function __construct(
         private readonly OutboundMessageLogger $messageLogger,
-        private readonly MagicLoginLinkService $magicLoginLinkService,
-    ) {
-    }
+    ) {}
 
     public function send(InboundMessageData $inbound, InboundProcessingResult $result): void
     {
+        if ($result->duplicate) {
+            return;
+        }
+
         $minutes = config('weightsy.signing.minutes', 10080);
 
         if ($result->recognized && $result->parsedCheckin !== null) {
@@ -38,21 +40,7 @@ class InboundCheckinResponder
                     'If you do nothing, we will keep your data but will not start recurring reminder emails.',
                 ]);
             } else {
-                $unsubscribeUrl = $result->user !== null
-                    ? URL::temporarySignedRoute('onboarding.unsubscribe', now()->addMinutes($minutes), ['user' => $result->user])
-                    : null;
-                $timelineUrl = $result->user !== null
-                    ? $this->magicLoginLinkService->createForUser($result->user)
-                    : rtrim(config('app.url'), '/').'/app';
-
-                $subject = 'Recorded: '.$result->parsedCheckin->normalizedDisplay;
-                $body = implode("\n", array_filter([
-                    'Recorded.',
-                    '',
-                    'We logged your '.$result->parsedCheckin->metricType.' check-in as '.$result->parsedCheckin->normalizedDisplay.'.',
-                    'Open your timeline: '.$timelineUrl,
-                    $unsubscribeUrl ? 'Unsubscribe: '.$unsubscribeUrl : null,
-                ]));
+                return;
             }
         } else {
             $subject = 'Weightsy check-in help';
@@ -81,9 +69,7 @@ class InboundCheckinResponder
             subject: $subject,
             body: $body,
             metadata: [
-                'category' => $result->recognized
-                    ? ($result->createdUser ? 'onboarding' : 'checkin_response')
-                    : 'checkin_help',
+                'category' => $result->recognized ? 'onboarding' : 'checkin_help',
             ],
             inReplyTo: $result->message->external_id,
         );

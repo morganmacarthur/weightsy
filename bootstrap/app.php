@@ -12,7 +12,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->validateCsrfTokens(except: [
-            'inbound/checkins',
+            'app/inbound/checkins',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

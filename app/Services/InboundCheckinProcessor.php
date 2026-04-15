@@ -4,12 +4,13 @@ namespace App\Services;
 
 use App\DataTransferObjects\InboundMessageData;
 use App\DataTransferObjects\InboundProcessingResult;
+use App\DataTransferObjects\ParsedCheckin;
 use App\Models\Checkin;
 use App\Models\ContactPoint;
 use App\Models\Message;
-use App\Models\ReminderSchedule;
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -21,8 +22,7 @@ class InboundCheckinProcessor
         private readonly ReminderScheduleManager $scheduleManager,
         private readonly TimezoneGuesser $timezoneGuesser,
         private readonly EmailReplyParser $replyParser,
-    ) {
-    }
+    ) {}
 
     public function process(InboundMessageData $inbound): InboundProcessingResult
     {
@@ -34,21 +34,44 @@ class InboundCheckinProcessor
         $normalizedAddress = Str::lower(trim($inbound->from));
 
         return DB::transaction(function () use ($body, $candidate, $parsed, $receivedAt, $channel, $normalizedAddress, $inbound) {
+            if ($inbound->externalId !== null) {
+                $existing = Message::query()
+                    ->where('direction', 'inbound')
+                    ->where('provider', $inbound->provider)
+                    ->where('external_id', $inbound->externalId)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($existing !== null) {
+                    return $this->inboundResultFromExistingMessage($existing);
+                }
+            }
+
             if ($parsed === null) {
-                $message = Message::query()->create([
-                    'direction' => 'inbound',
-                    'channel' => $channel,
-                    'provider' => $inbound->provider,
-                    'external_id' => $inbound->externalId,
-                    'subject' => $inbound->subject,
-                    'body_text' => $body,
-                    'parsed_status' => 'unrecognized',
-                    'received_at' => $receivedAt,
-                    'processed_at' => now(),
-                    'metadata' => array_merge($inbound->metadata, [
-                        'parse_candidate' => $candidate,
-                    ]),
-                ]);
+                try {
+                    $message = Message::query()->create([
+                        'direction' => 'inbound',
+                        'channel' => $channel,
+                        'provider' => $inbound->provider,
+                        'external_id' => $inbound->externalId,
+                        'subject' => $inbound->subject,
+                        'body_text' => $body,
+                        'parsed_status' => 'unrecognized',
+                        'received_at' => $receivedAt,
+                        'processed_at' => now(),
+                        'metadata' => array_merge($inbound->metadata, [
+                            'parse_candidate' => $candidate,
+                        ]),
+                    ]);
+                } catch (UniqueConstraintViolationException) {
+                    $existing = Message::query()
+                        ->where('direction', 'inbound')
+                        ->where('provider', $inbound->provider)
+                        ->where('external_id', $inbound->externalId)
+                        ->firstOrFail();
+
+                    return $this->inboundResultFromExistingMessage($existing);
+                }
 
                 return new InboundProcessingResult(
                     recognized: false,
@@ -94,19 +117,29 @@ class InboundCheckinProcessor
                 ]);
             }
 
-            $message = Message::query()->create([
-                'user_id' => $user->id,
-                'contact_point_id' => $contactPoint->id,
-                'direction' => 'inbound',
-                'channel' => $channel,
-                'provider' => $inbound->provider,
-                'external_id' => $inbound->externalId,
-                'subject' => $inbound->subject,
-                'body_text' => $body,
-                'parsed_status' => 'pending',
-                'received_at' => $receivedAt,
-                'metadata' => $inbound->metadata,
-            ]);
+            try {
+                $message = Message::query()->create([
+                    'user_id' => $user->id,
+                    'contact_point_id' => $contactPoint->id,
+                    'direction' => 'inbound',
+                    'channel' => $channel,
+                    'provider' => $inbound->provider,
+                    'external_id' => $inbound->externalId,
+                    'subject' => $inbound->subject,
+                    'body_text' => $body,
+                    'parsed_status' => 'pending',
+                    'received_at' => $receivedAt,
+                    'metadata' => $inbound->metadata,
+                ]);
+            } catch (UniqueConstraintViolationException) {
+                $existing = Message::query()
+                    ->where('direction', 'inbound')
+                    ->where('provider', $inbound->provider)
+                    ->where('external_id', $inbound->externalId)
+                    ->firstOrFail();
+
+                return $this->inboundResultFromExistingMessage($existing);
+            }
 
             $localizedTimestamp = $receivedAt->setTimezone($user->timezone);
             $reminderTime = $user->reminder_time_local ?? $localizedTimestamp->format('H:i:s');
@@ -155,5 +188,45 @@ class InboundCheckinProcessor
                 parsedCheckin: $parsed,
             );
         });
+    }
+
+    private function inboundResultFromExistingMessage(Message $message): InboundProcessingResult
+    {
+        if ($message->parsed_status === 'unrecognized') {
+            return new InboundProcessingResult(
+                recognized: false,
+                createdUser: false,
+                user: $message->user,
+                checkin: null,
+                message: $message,
+                parsedCheckin: null,
+                duplicate: true,
+            );
+        }
+
+        $checkinId = $message->metadata['checkin_id'] ?? null;
+        $checkin = $checkinId !== null ? Checkin::query()->find($checkinId) : null;
+        $user = $message->user ?? $checkin?->user;
+
+        $parsedCheckin = null;
+        if ($checkin !== null) {
+            $parsedCheckin = new ParsedCheckin(
+                metricType: $checkin->metric_type,
+                valueDecimal: $checkin->value_decimal,
+                systolic: $checkin->systolic,
+                diastolic: $checkin->diastolic,
+                normalizedDisplay: $checkin->editableInput(),
+            );
+        }
+
+        return new InboundProcessingResult(
+            recognized: $checkin !== null,
+            createdUser: false,
+            user: $user,
+            checkin: $checkin,
+            message: $message,
+            parsedCheckin: $parsedCheckin,
+            duplicate: true,
+        );
     }
 }

@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo as BelongsToRelation;
     'channel',
     'sent_to',
     'purpose',
+    'token_lookup',
     'token_hash',
     'expires_at',
     'used_at',

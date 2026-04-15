@@ -14,8 +14,7 @@ class InboundCheckinController extends Controller
     public function __construct(
         private readonly InboundCheckinProcessor $processor,
         private readonly ContactChannelGuesser $channelGuesser,
-    ) {
-    }
+    ) {}
 
     public function __invoke(Request $request): JsonResponse
     {
@@ -47,6 +46,7 @@ class InboundCheckinController extends Controller
                 'status' => 'unrecognized',
                 'message' => 'Supported formats are weight like 123, blood pressure like 120/70, or body fat like 14.0%.',
                 'message_id' => $result->message->id,
+                'duplicate' => $result->duplicate,
             ], 422);
         }
 
@@ -58,6 +58,7 @@ class InboundCheckinController extends Controller
             'user_id' => $result->user?->id,
             'checkin_id' => $result->checkin?->id,
             'message_id' => $result->message->id,
+            'duplicate' => $result->duplicate,
         ], $result->createdUser ? 201 : 200);
     }
 }

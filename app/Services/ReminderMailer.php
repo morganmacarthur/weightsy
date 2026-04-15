@@ -5,15 +5,19 @@ namespace App\Services;
 use App\Models\User;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
+use Throwable;
 
 class ReminderMailer
 {
     public function __construct(
         private readonly OutboundMessageLogger $messageLogger,
-    ) {
-    }
+        private readonly MagicLoginLinkService $magicLoginLinkService,
+    ) {}
 
-    public function send(User $user): void
+    /**
+     * @return array{sent: bool, reason: string|null}
+     */
+    public function send(User $user): array
     {
         $contactPoint = $user->contactPoints()
             ->where('channel', 'email')
@@ -23,7 +27,10 @@ class ReminderMailer
         $to = $user->email ?? $contactPoint?->address;
 
         if (! $to) {
-            return;
+            return [
+                'sent' => false,
+                'reason' => 'no_recipient',
+            ];
         }
 
         $subject = 'Weightsy check-in reminder';
@@ -33,6 +40,8 @@ class ReminderMailer
             ['user' => $user]
         );
 
+        $timelineUrl = $this->magicLoginLinkService->createForUser($user);
+
         $body = implode("\n", [
             'Time for today\'s Weightsy check-in.',
             '',
@@ -41,12 +50,23 @@ class ReminderMailer
             '120/70',
             '14.0%',
             '',
+            'After your check-in, you can view your progress here: '.$timelineUrl,
+            '',
             'Unsubscribe: '.$unsubscribeUrl,
         ]);
 
-        Mail::raw($body, function ($message) use ($to) {
-            $message->to($to)->subject('Weightsy check-in reminder');
-        });
+        try {
+            Mail::raw($body, function ($message) use ($to) {
+                $message->to($to)->subject('Weightsy check-in reminder');
+            });
+        } catch (Throwable $e) {
+            report($e);
+
+            return [
+                'sent' => false,
+                'reason' => 'mail_exception: '.$e->getMessage(),
+            ];
+        }
 
         $this->messageLogger->log(
             user: $user,
@@ -60,5 +80,10 @@ class ReminderMailer
                 'category' => 'reminder',
             ],
         );
+
+        return [
+            'sent' => true,
+            'reason' => null,
+        ];
     }
 }
