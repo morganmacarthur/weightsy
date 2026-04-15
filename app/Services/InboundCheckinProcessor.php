@@ -19,18 +19,21 @@ class InboundCheckinProcessor
         private readonly CheckinMessageParser $parser,
         private readonly ContactChannelGuesser $channelGuesser,
         private readonly ReminderScheduleManager $scheduleManager,
+        private readonly TimezoneGuesser $timezoneGuesser,
+        private readonly EmailReplyParser $replyParser,
     ) {
     }
 
     public function process(InboundMessageData $inbound): InboundProcessingResult
     {
         $body = trim($inbound->text);
-        $parsed = $this->parser->parse($body);
+        $candidate = $this->replyParser->extractCheckinCandidate($body);
+        $parsed = $this->parser->parse($candidate);
         $receivedAt = $inbound->receivedAt ?? CarbonImmutable::now();
         $channel = $inbound->channel ?: $this->channelGuesser->guess($inbound->from);
         $normalizedAddress = Str::lower(trim($inbound->from));
 
-        return DB::transaction(function () use ($body, $parsed, $receivedAt, $channel, $normalizedAddress, $inbound) {
+        return DB::transaction(function () use ($body, $candidate, $parsed, $receivedAt, $channel, $normalizedAddress, $inbound) {
             if ($parsed === null) {
                 $message = Message::query()->create([
                     'direction' => 'inbound',
@@ -42,7 +45,9 @@ class InboundCheckinProcessor
                     'parsed_status' => 'unrecognized',
                     'received_at' => $receivedAt,
                     'processed_at' => now(),
-                    'metadata' => $inbound->metadata,
+                    'metadata' => array_merge($inbound->metadata, [
+                        'parse_candidate' => $candidate,
+                    ]),
                 ]);
 
                 return new InboundProcessingResult(
@@ -66,7 +71,7 @@ class InboundCheckinProcessor
                     'display_name' => Str::of($normalizedAddress)->before('@')->replace(['.', '_'], ' ')->title(),
                     'email' => $channel === 'email' ? $normalizedAddress : null,
                     'email_verified_at' => $channel === 'email' ? $receivedAt : null,
-                    'timezone' => config('weightsy.default_timezone'),
+                    'timezone' => $this->timezoneGuesser->guess($receivedAt),
                     'onboarding_completed_at' => $receivedAt,
                 ]);
 
@@ -137,6 +142,7 @@ class InboundCheckinProcessor
                     'metric_type' => $parsed->metricType,
                     'checkin_id' => $checkin->id,
                     'normalized_display' => $parsed->normalizedDisplay,
+                    'parse_candidate' => $candidate,
                 ]),
             ]);
 

@@ -25,6 +25,7 @@ This restart includes:
 - a pending-vs-confirmed reminder onboarding flow with signed confirm/settings/unsubscribe links
 - parsing for the three supported check-in message formats
 - a new landing page that reflects the actual product direction
+- a single outbound mail path through Laravel mail, which can be backed by SES for onboarding, replies, and reminders
 
 ## Local setup
 
@@ -87,4 +88,17 @@ The command will:
 - The Laravel product app is intended to live at `https://weightsy.com/app/`, leaving the site root and legacy blog URLs untouched.
 - The current working inbox/check-in address is `update@weightsy.com`.
 - The previous non-Laravel iteration has been preserved locally in `_archive/2026-04-03-pre-laravel-restart`.
-- Postmark is still the likely deliverability assist later, but this foundation keeps inbound and outbound message records local so we can self-host most of the workflow.
+- Inbound and outbound message records are kept locally in the app database for debugging and history.
+
+## Deployment sync rule
+
+For FTP deploys, the safest rule is:
+
+- upload everything in the Weightsy app folder
+- do not overwrite:
+  - `.env`
+  - `.htaccess`
+  - `public/.htaccess`
+  - `database/database.sqlite`
+
+That avoids losing server-specific config while also avoiding partial code deploys that leave reminder or onboarding logic out of sync.

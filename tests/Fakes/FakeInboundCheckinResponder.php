@@ -5,7 +5,8 @@ namespace Tests\Fakes;
 use App\DataTransferObjects\InboundMessageData;
 use App\DataTransferObjects\InboundProcessingResult;
 use App\Services\InboundCheckinResponder;
-use App\Services\PostmarkMailer;
+use App\Services\MagicLoginLinkService;
+use App\Services\OutboundMessageLogger;
 
 class FakeInboundCheckinResponder extends InboundCheckinResponder
 {
@@ -13,16 +14,7 @@ class FakeInboundCheckinResponder extends InboundCheckinResponder
 
     public function __construct()
     {
-        parent::__construct(new class extends PostmarkMailer {
-            public function __construct()
-            {
-            }
-
-            public function isConfigured(): bool
-            {
-                return false;
-            }
-        });
+        parent::__construct(new OutboundMessageLogger(), new MagicLoginLinkService());
     }
 
     public function send(InboundMessageData $inbound, InboundProcessingResult $result): void

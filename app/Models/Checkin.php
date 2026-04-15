@@ -42,4 +42,18 @@ class Checkin extends Model
     {
         return $this->belongsTo(ContactPoint::class);
     }
+
+    public function displayValue(): string
+    {
+        return match ($this->metric_type) {
+            'blood_pressure' => trim(sprintf('%s/%s', $this->systolic, $this->diastolic), '/'),
+            'body_fat' => rtrim(rtrim((string) $this->value_decimal, '0'), '.').'%',
+            default => rtrim(rtrim((string) $this->value_decimal, '0'), '.'),
+        };
+    }
+
+    public function editableInput(): string
+    {
+        return $this->displayValue();
+    }
 }

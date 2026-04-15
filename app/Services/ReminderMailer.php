@@ -8,14 +8,25 @@ use Illuminate\Support\Facades\URL;
 
 class ReminderMailer
 {
+    public function __construct(
+        private readonly OutboundMessageLogger $messageLogger,
+    ) {
+    }
+
     public function send(User $user): void
     {
-        $to = $user->email ?? $user->contactPoints()->value('address');
+        $contactPoint = $user->contactPoints()
+            ->where('channel', 'email')
+            ->orderByDesc('receives_reminders')
+            ->orderBy('id')
+            ->first();
+        $to = $user->email ?? $contactPoint?->address;
 
         if (! $to) {
             return;
         }
 
+        $subject = 'Weightsy check-in reminder';
         $unsubscribeUrl = URL::temporarySignedRoute(
             'onboarding.unsubscribe',
             now()->addMinutes(config('weightsy.signing.minutes', 10080)),
@@ -36,5 +47,18 @@ class ReminderMailer
         Mail::raw($body, function ($message) use ($to) {
             $message->to($to)->subject('Weightsy check-in reminder');
         });
+
+        $this->messageLogger->log(
+            user: $user,
+            contactPoint: $contactPoint,
+            channel: 'email',
+            provider: 'smtp',
+            to: $to,
+            subject: $subject,
+            body: $body,
+            metadata: [
+                'category' => 'reminder',
+            ],
+        );
     }
 }

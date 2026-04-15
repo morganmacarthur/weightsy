@@ -3,10 +3,12 @@
 namespace Tests\Feature;
 
 use App\Models\ContactPoint;
+use App\Models\Message;
 use App\Models\ReminderSchedule;
 use App\Models\User;
 use App\Services\ReminderMailer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class SendReminderEmailsTest extends TestCase
@@ -87,5 +89,48 @@ class SendReminderEmailsTest extends TestCase
         $this->assertSame(['active@example.com'], $fakeMailer->sentTo);
         $this->assertNotNull($activeSchedule->last_sent_for_date);
         $this->assertNull($pendingSchedule->last_sent_for_date);
+    }
+
+    public function test_it_records_outbound_messages_for_sent_reminders(): void
+    {
+        Mail::fake();
+
+        $user = User::factory()->create([
+            'email' => 'active@example.com',
+            'notification_confirmed_at' => now(),
+        ]);
+
+        $contact = ContactPoint::query()->create([
+            'user_id' => $user->id,
+            'channel' => 'email',
+            'address' => 'active@example.com',
+            'normalized_address' => 'active@example.com',
+            'receives_reminders' => true,
+        ]);
+
+        ReminderSchedule::query()->create([
+            'user_id' => $user->id,
+            'contact_point_id' => $contact->id,
+            'status' => 'active',
+            'cadence' => 'daily',
+            'timezone' => $user->timezone,
+            'remind_at_local' => '08:30:00',
+            'next_run_at' => now()->subMinute(),
+        ]);
+
+        $this->artisan('weightsy:reminders:send')
+            ->expectsOutputToContain('Sent reminder to active@example.com')
+            ->assertSuccessful();
+
+        $this->assertDatabaseHas('messages', [
+            'user_id' => $user->id,
+            'contact_point_id' => $contact->id,
+            'direction' => 'outbound',
+            'provider' => 'smtp',
+            'subject' => 'Weightsy check-in reminder',
+        ]);
+
+        $this->assertSame(1, Message::query()->where('direction', 'outbound')->count());
+        $this->assertNotNull($contact->fresh()->last_outbound_at);
     }
 }

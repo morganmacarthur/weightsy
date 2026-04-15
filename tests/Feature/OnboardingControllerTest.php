@@ -126,6 +126,7 @@ class OnboardingControllerTest extends TestCase
         $url = URL::temporarySignedRoute('onboarding.update', now()->addHour(), ['user' => $user]);
 
         $this->post($url, [
+            'timezone' => 'America/New_York',
             'reminder_time_local' => '07:15',
         ])->assertRedirect();
 
@@ -133,9 +134,11 @@ class OnboardingControllerTest extends TestCase
         $schedule = ReminderSchedule::query()->where('user_id', $user->id)->first();
 
         $this->assertSame('07:15:00', $user->reminder_time_local);
+        $this->assertSame('America/New_York', $user->timezone);
         $this->assertNotNull($user->notification_confirmed_at);
         $this->assertSame('active', $schedule->status);
         $this->assertSame('07:15:00', $schedule->remind_at_local);
+        $this->assertSame('America/New_York', $schedule->timezone);
         $this->assertNotNull($schedule->next_run_at);
     }
 }

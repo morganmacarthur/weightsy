@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ReminderSchedule;
 use App\Models\User;
 use App\Services\ReminderScheduleManager;
+use App\Services\TimezoneGuesser;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -13,6 +14,7 @@ class OnboardingController extends Controller
 {
     public function __construct(
         private readonly ReminderScheduleManager $scheduleManager,
+        private readonly TimezoneGuesser $timezoneGuesser,
     ) {
     }
 
@@ -29,6 +31,7 @@ class OnboardingController extends Controller
     {
         return view('onboarding.settings', [
             'user' => $user,
+            'timezoneOptions' => $this->timezoneGuesser->options(),
         ]);
     }
 
@@ -36,10 +39,12 @@ class OnboardingController extends Controller
     {
         $validated = $request->validate([
             'reminder_time_local' => ['required', 'date_format:H:i'],
+            'timezone' => ['required', 'string'],
         ]);
 
         $user->update([
             'reminder_time_local' => $validated['reminder_time_local'].':00',
+            'timezone' => $validated['timezone'],
         ]);
 
         $this->activateReminders($user);

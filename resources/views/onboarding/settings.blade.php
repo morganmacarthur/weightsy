@@ -9,8 +9,8 @@
             .shell { max-width: 720px; margin: 48px auto; padding: 24px; }
             .card { background: #fffdf8; border: 1px solid #e5dccd; border-radius: 18px; padding: 28px; }
             h1 { margin-top: 0; }
-            label, input, button { display: block; width: 100%; }
-            input { margin: 10px 0 16px; padding: 10px 12px; font-size: 16px; }
+            label, input, select, button { display: block; width: 100%; }
+            input, select { margin: 10px 0 16px; padding: 10px 12px; font-size: 16px; }
             button { background: #0d5c7d; color: white; border: 0; border-radius: 12px; padding: 12px 14px; cursor: pointer; }
             .status { margin-bottom: 16px; padding: 10px 12px; background: #eef8ec; border-radius: 12px; }
             .links { margin-top: 16px; }
@@ -29,6 +29,15 @@
 
                 <form method="post" action="{{ route('onboarding.update', ['user' => $user] + request()->query()) }}">
                     @csrf
+                    <label for="timezone">Timezone</label>
+                    <select id="timezone" name="timezone" required>
+                        @foreach ($timezoneOptions as $value => $label)
+                            <option value="{{ $value }}" @selected(old('timezone', $user->timezone) === $value)>
+                                {{ $label }} ({{ $value }})
+                            </option>
+                        @endforeach
+                    </select>
+
                     <label for="reminder_time_local">Reminder time</label>
                     <input
                         id="reminder_time_local"
